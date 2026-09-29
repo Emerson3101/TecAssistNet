@@ -164,6 +164,33 @@ create policy "own documents" on documents
 alter table conversations enable row level security;
 create policy "own conversations" on conversations
     using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Child tables have no user_id column, but they MUST still get RLS: Supabase grants
+-- anon/authenticated full DML on public tables by default, so without policies a leaked
+-- anon key could read every user's chunks and messages through PostgREST (RLS is
+-- per-table in Postgres — parent policies do not cascade). Scope them through their
+-- parent rows. The executable, idempotent script lives at supabase/rls.sql:
+alter table document_chunks enable row level security;
+create policy "own document chunks" on document_chunks
+    using (exists (select 1 from documents d where d.id = document_id and d.user_id = auth.uid()))
+    with check (exists (select 1 from documents d where d.id = document_id and d.user_id = auth.uid()));
+
+alter table messages enable row level security;
+create policy "own messages" on messages
+    using (exists (select 1 from conversations c where c.id = conversation_id and c.user_id = auth.uid()))
+    with check (exists (select 1 from conversations c where c.id = conversation_id and c.user_id = auth.uid()));
+
+alter table message_citations enable row level security;
+create policy "own message citations" on message_citations
+    using (exists (
+        select 1 from messages m join conversations c on c.id = m.conversation_id
+        where m.id = message_id and c.user_id = auth.uid()))
+    with check (exists (
+        select 1 from messages m join conversations c on c.id = m.conversation_id
+        where m.id = message_id and c.user_id = auth.uid())
+        and exists (
+        select 1 from document_chunks k join documents d on d.id = k.document_id
+        where k.id = chunk_id and d.user_id = auth.uid()));
 ```
 
 **EF Core side** (`Pgvector.EntityFrameworkCore`, confirmed current as of this writing — works with EF Core 9 and 10):
