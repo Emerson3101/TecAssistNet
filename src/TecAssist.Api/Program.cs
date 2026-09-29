@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Serilog;
+using TecAssist.Api.Middleware;
 using TecAssist.Api.Services;
+using TecAssist.Application;
 using TecAssist.Application.Common;
 using TecAssist.Infrastructure;
 
@@ -23,6 +25,7 @@ try
     builder.Services.AddControllers();
     builder.Services.AddOpenApi();
 
+    builder.Services.AddApplication(builder.Configuration);
     builder.Services.AddInfrastructure(builder.Configuration);
 
     var authDisabled = builder.Configuration.GetValue("Auth:Disabled", false);
@@ -54,6 +57,7 @@ try
     var app = builder.Build();
 
     app.UseSerilogRequestLogging();
+    app.UseMiddleware<ExceptionHandlingMiddleware>();
 
     if (app.Environment.IsDevelopment())
     {

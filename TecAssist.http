@@ -1,0 +1,48 @@
+﻿@host = http://localhost:5028
+
+### Health: liveness
+GET {{host}}/health
+
+### Health: readiness (database connectivity)
+GET {{host}}/health/ready
+
+### Upload a text document
+POST {{host}}/api/documents/text
+Content-Type: application/json
+
+{
+  "title": "Q3 Compliance Report",
+  "content": "All delivered units passed the voltage compliance test in Q3. The average measured voltage was 229V, within the 220V +/- 10 percent tolerance required by IEC 61010. Two prototypes failed the initial leakage current test and were reworked before delivery.",
+  "sourceType": "text"
+}
+
+### List documents
+GET {{host}}/api/documents
+
+### Get document by id
+GET {{host}}/api/documents/00000000-0000-0000-0000-000000000000
+
+### Delete a document
+DELETE {{host}}/api/documents/00000000-0000-0000-0000-000000000000
+
+### Create a conversation
+POST {{host}}/api/conversations
+Content-Type: application/json
+
+{
+  "title": "Voltage compliance questions"
+}
+
+### List conversations
+GET {{host}}/api/conversations
+
+### Send a message (non-streaming)
+POST {{host}}/api/conversations/00000000-0000-0000-0000-000000000000/messages
+Content-Type: application/json
+
+{
+  "content": "What did the Q3 report say about voltage compliance?"
+}
+
+### Get message history
+GET {{host}}/api/conversations/00000000-0000-0000-0000-000000000000/messages
