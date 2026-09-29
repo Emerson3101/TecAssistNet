@@ -41,17 +41,21 @@ export function SourcesSheet({
                   </p>
                 </div>
 
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.max(2, Math.round(citation.score * 100))}%` }}
-                    transition={{ delay: 0.15 + index * 0.05, type: "spring", stiffness: 90, damping: 20 }}
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-500"
-                  />
-                </div>
-                <p className="mt-1 text-right text-[11px] text-muted-foreground">
-                  similarity {(citation.score * 100).toFixed(0)}%
-                </p>
+                {citation.score > 0 && (
+                  <>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.max(2, Math.round(citation.score * 100))}%` }}
+                        transition={{ delay: 0.15 + index * 0.05, type: "spring", stiffness: 90, damping: 20 }}
+                        className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-500"
+                      />
+                    </div>
+                    <p className="mt-1 text-right text-[11px] text-muted-foreground">
+                      similarity {(citation.score * 100).toFixed(0)}%
+                    </p>
+                  </>
+                )}
 
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {citation.snippet}

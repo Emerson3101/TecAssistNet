@@ -36,3 +36,5 @@ secrets.json
 # OS
 Thumbs.db
 .DS_Store
+
+.playwright-mcp/
