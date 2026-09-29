@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TecAssist.Api/TecAssist.Api.csproj" />
+    <Project Path="src/TecAssist.Application/TecAssist.Application.csproj" />
+    <Project Path="src/TecAssist.Domain/TecAssist.Domain.csproj" />
+    <Project Path="src/TecAssist.Infrastructure/TecAssist.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TecAssist.IntegrationTests/TecAssist.IntegrationTests.csproj" />
+    <Project Path="tests/TecAssist.UnitTests/TecAssist.UnitTests.csproj" />
+  </Folder>
+</Solution>
