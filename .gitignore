@@ -1,0 +1,38 @@
+# Build artifacts
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.iml
+
+# Test results
+TestResults/
+*.trx
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+*.pfx
+secrets.json
+
+# EF tools
+.dotnet/
+
+# OS
+Thumbs.db
+.DS_Store
