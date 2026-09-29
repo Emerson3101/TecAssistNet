@@ -21,7 +21,8 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default");
 
         services.AddDbContext<TecAssistDbContext>(options =>
-            options.UseNpgsql(connectionString, npgsql => npgsql.UseVector()));
+            options.UseNpgsql(connectionString, npgsql => npgsql.UseVector())
+                .UseSnakeCaseNamingConvention());
 
         services.AddScoped<ITecAssistDbContext>(provider => provider.GetRequiredService<TecAssistDbContext>());
 

@@ -11,6 +11,7 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Tec
             .UseNpgsql(
                 "Host=localhost;Database=tecasist;Username=postgres;Password=postgres",
                 npgsql => npgsql.UseVector())
+            .UseSnakeCaseNamingConvention()
             .Options;
 
         return new TecAssistDbContext(options);
