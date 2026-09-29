@@ -41,7 +41,15 @@ public static class DependencyInjection
             httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", settings.ApiKey);
         });
-        services.AddSingleton<IChatClient, NvidiaChatClient>();
+        services.AddHttpClient<IChatClient, NvidiaChatClient>((provider, httpClient) =>
+        {
+            var settings = provider.GetRequiredService<IOptions<NvidiaOptions>>().Value;
+            httpClient.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+            httpClient.Timeout = Timeout.InfiniteTimeSpan;
+            httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", settings.ApiKey);
+        });
+
         services.AddScoped<ITextExtractor, TextExtractor>();
         services.AddScoped<IChunkSearcher, PgVectorChunkSearcher>();
         services.AddHostedService<IngestionWorker>();

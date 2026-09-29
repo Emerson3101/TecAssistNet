@@ -1,20 +1,18 @@
+using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
-using OpenAI;
-using OpenAI.Chat;
-using System.ClientModel;
 using TecAssist.Application.Abstractions;
 using AppChatMessage = TecAssist.Application.Abstractions.ChatMessage;
-using SdkChatMessage = OpenAI.Chat.ChatMessage;
 
 namespace TecAssist.Infrastructure.Nlp;
 
-public sealed class NvidiaChatClient : IChatClient
+public sealed class NvidiaChatClient(HttpClient httpClient, IOptions<NvidiaOptions> options) : IChatClient
 {
-    private readonly ChatClient _chatClient;
-    private readonly ChatCompletionOptions _completionOptions;
-
-    public NvidiaChatClient(IOptions<NvidiaOptions> options)
+    public async IAsyncEnumerable<string> StreamCompletionAsync(
+        IReadOnlyList<AppChatMessage> messages,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var settings = options.Value;
         if (string.IsNullOrWhiteSpace(settings.ApiKey) || string.IsNullOrWhiteSpace(settings.ChatModel))
@@ -23,47 +21,79 @@ public sealed class NvidiaChatClient : IChatClient
                 "NVIDIA chat settings are not configured. Set Nvidia:ApiKey and Nvidia:ChatModel.");
         }
 
-        var clientOptions = new OpenAIClientOptions
-        {
-            Endpoint = new Uri(settings.BaseUrl.TrimEnd('/') + "/")
-        };
-        var openAiClient = new OpenAIClient(new ApiKeyCredential(settings.ApiKey), clientOptions);
-        _chatClient = openAiClient.GetChatClient(settings.ChatModel);
-        _completionOptions = new ChatCompletionOptions
-        {
-            MaxOutputTokenCount = settings.MaxOutputTokens
-        };
-    }
+        var request = new ChatCompletionRequest(
+            settings.ChatModel,
+            [.. messages.Select(message => new WireChatMessage(message.Role, message.Content))],
+            settings.MaxOutputTokens,
+            Stream: true);
 
-    public async Task<string> CompleteAsync(
-        IReadOnlyList<AppChatMessage> messages,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await _chatClient.CompleteChatAsync(ToSdkMessages(messages), _completionOptions, cancellationToken);
-        return ExtractText(result.Value.Content);
-    }
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
+        httpRequest.Content = JsonContent.Create(request, options: Json.Options);
 
-    public async IAsyncEnumerable<string> StreamCompletionAsync(
-        IReadOnlyList<AppChatMessage> messages,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
-        await foreach (var update in _chatClient.CompleteChatStreamingAsync(ToSdkMessages(messages), _completionOptions, cancellationToken))
+        using var response = await httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (!response.IsSuccessStatusCode)
         {
-            if (update.ContentUpdate.Count > 0)
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new HttpRequestException(
+                $"The NVIDIA chat endpoint returned {(int)response.StatusCode}: {Truncate(body)}");
+        }
+
+        using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(contentStream);
+
+        while (true)
+        {
+            var line = await reader.ReadLineAsync(cancellationToken);
+            if (line is null)
             {
-                yield return update.ContentUpdate[0].Text;
+                break;
+            }
+
+            line = line.Trim();
+            if (line.Length == 0 || !line.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var payload = line["data:".Length..].Trim();
+            if (payload == "[DONE]")
+            {
+                break;
+            }
+
+            var update = JsonSerializer.Deserialize<ChatStreamUpdate>(payload, Json.Options);
+            var deltaContent = update?.Choices?.Count > 0 ? update.Choices[0].Delta?.Content : null;
+            if (!string.IsNullOrEmpty(deltaContent))
+            {
+                yield return deltaContent;
             }
         }
     }
 
-    private static List<SdkChatMessage> ToSdkMessages(IReadOnlyList<AppChatMessage> messages) =>
-        [.. messages.Select(message => (SdkChatMessage)(message.Role switch
-        {
-            ChatRoles.System => new SystemChatMessage(message.Content),
-            ChatRoles.Assistant => new AssistantChatMessage(message.Content),
-            _ => new UserChatMessage(message.Content)
-        }))];
+    private static string Truncate(string body) => body.Length <= 500 ? body : body[..500];
 
-    private static string ExtractText(ChatMessageContent content) =>
-        content.Count == 0 ? string.Empty : string.Concat(content.Select(part => part.Text));
+    private static class Json
+    {
+        public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
+    }
+
+    private sealed record ChatCompletionRequest(
+        [property: JsonPropertyName("model")] string Model,
+        [property: JsonPropertyName("messages")] IReadOnlyList<WireChatMessage> Messages,
+        [property: JsonPropertyName("max_tokens")] int MaxTokens,
+        [property: JsonPropertyName("stream")] bool Stream);
+
+    private sealed record WireChatMessage(
+        [property: JsonPropertyName("role")] string Role,
+        [property: JsonPropertyName("content")] string Content);
+
+    private sealed record ChatStreamUpdate(
+        [property: JsonPropertyName("choices")] IReadOnlyList<WireChoice>? Choices);
+
+    private sealed record WireChoice(
+        [property: JsonPropertyName("delta")] WireDelta? Delta,
+        [property: JsonPropertyName("finish_reason")] string? FinishReason);
+
+    private sealed record WireDelta(
+        [property: JsonPropertyName("content")] string? Content);
 }

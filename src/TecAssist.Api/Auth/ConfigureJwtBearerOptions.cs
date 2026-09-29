@@ -8,10 +8,15 @@ namespace TecAssist.Api.Auth;
 
 public sealed class ConfigureJwtBearerOptions(
     JwksProvider jwksProvider,
-    IOptions<SupabaseOptions> supabaseOptions) : IConfigureOptions<JwtBearerOptions>
+    IOptions<SupabaseOptions> supabaseOptions) : IConfigureNamedOptions<JwtBearerOptions>
 {
-    public void Configure(JwtBearerOptions options)
+    public void Configure(string? name, JwtBearerOptions options)
     {
+        if (!string.IsNullOrEmpty(name) && name != JwtBearerDefaults.AuthenticationScheme)
+        {
+            return;
+        }
+
         var supabase = supabaseOptions.Value;
         var algorithm = string.IsNullOrWhiteSpace(supabase.JwtSecret) ? "ES256" : "HS256";
 
@@ -38,4 +43,7 @@ public sealed class ConfigureJwtBearerOptions(
                 jwksProvider.GetSigningKeys(supabase.ResolveJwksUrl());
         }
     }
+
+    public void Configure(JwtBearerOptions options) =>
+        Configure(JwtBearerDefaults.AuthenticationScheme, options);
 }
