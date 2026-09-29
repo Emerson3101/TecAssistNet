@@ -80,6 +80,10 @@ try
 
     app.Run();
 }
+catch (HostAbortedException)
+{
+    throw;
+}
 catch (Exception exception)
 {
     Log.Fatal(exception, "TecAssist.API host terminated unexpectedly");

@@ -59,7 +59,7 @@ public class TecAssistDbContext : DbContext, ITecAssistDbContext
             entity.Property(chunk => chunk.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(chunk => chunk.Content).IsRequired();
             entity.Property(chunk => chunk.CreatedAt).HasDefaultValueSql("now()");
-            entity.Property(chunk => chunk.Embedding).HasColumnType("vector(1024)");
+            entity.Property(chunk => chunk.Embedding).HasColumnType("vector(2048)");
             entity.HasIndex(chunk => chunk.DocumentId);
         });
 

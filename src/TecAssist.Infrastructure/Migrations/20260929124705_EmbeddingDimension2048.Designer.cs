@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using TecAssist.Infrastructure.Persistence;
 namespace TecAssist.Infrastructure.Migrations
 {
     [DbContext(typeof(TecAssistDbContext))]
-    partial class TecAssistDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260929124705_EmbeddingDimension2048")]
+    partial class EmbeddingDimension2048
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

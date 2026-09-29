@@ -146,3 +146,28 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260929124705_EmbeddingDimension2048') THEN
+    drop index if exists ix_document_chunks_embedding_hnsw;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260929124705_EmbeddingDimension2048') THEN
+    ALTER TABLE document_chunks ALTER COLUMN embedding TYPE vector(2048);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "migration_id" = '20260929124705_EmbeddingDimension2048') THEN
+    INSERT INTO "__EFMigrationsHistory" (migration_id, product_version)
+    VALUES ('20260929124705_EmbeddingDimension2048', '10.0.12');
+    END IF;
+END $EF$;
+COMMIT;
+
