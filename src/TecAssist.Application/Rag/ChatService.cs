@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TecAssist.Application.Abstractions;
@@ -17,18 +19,15 @@ public sealed class ChatService(
     PromptBuilder promptBuilder,
     IOptions<RagOptions> options)
 {
-    public async Task<SendMessageResponse?> SendMessageAsync(
+    public async Task<ChatMessageStream> StartMessageStreamAsync(
         Guid conversationId,
         string content,
         CancellationToken cancellationToken = default)
     {
         var userId = currentUser.RequireUserId();
         var conversation = await db.Conversations
-            .FirstOrDefaultAsync(c => c.Id == conversationId && c.UserId == userId, cancellationToken);
-        if (conversation is null)
-        {
-            return null;
-        }
+            .FirstOrDefaultAsync(c => c.Id == conversationId && c.UserId == userId, cancellationToken)
+            ?? throw new ResourceNotFoundException($"Conversation '{conversationId}' was not found.");
 
         var userMessage = new Message
         {
@@ -64,17 +63,47 @@ public sealed class ChatService(
 
         var prompt = promptBuilder.Build(context, history, content);
 
-        string answer;
-        try
+        return new ChatMessageStream(
+            userMessage.Id,
+            StreamAnswerAsync(conversationId, userMessage.Id, context, prompt, cancellationToken));
+    }
+
+    private async IAsyncEnumerable<ChatStreamEvent> StreamAnswerAsync(
+        Guid conversationId,
+        Guid userMessageId,
+        IReadOnlyList<ChunkSearchResult> context,
+        IReadOnlyList<ChatMessage> prompt,
+        CancellationToken cancellationToken)
+    {
+        var answer = new StringBuilder();
+
+        await using var enumerator = chatClient
+            .StreamCompletionAsync(prompt, cancellationToken)
+            .GetAsyncEnumerator(cancellationToken);
+
+        while (true)
         {
-            answer = await chatClient.CompleteAsync(prompt, cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            throw new ChatGenerationException("The chat completion request failed.", exception);
+            string token;
+            try
+            {
+                if (!await enumerator.MoveNextAsync())
+                {
+                    break;
+                }
+
+                token = enumerator.Current;
+            }
+            catch (Exception exception)
+            {
+                throw new ChatGenerationException("The chat completion stream failed.", exception);
+            }
+
+            answer.Append(token);
+            yield return new TokenEvent(token);
         }
 
-        var citedIndices = CitationParser.ExtractCitedIndices(answer, context.Count);
+        var answerText = answer.ToString();
+        var citedIndices = CitationParser.ExtractCitedIndices(answerText, context.Count);
         var citations = citedIndices.Count == 0
             ? context.ToList()
             : citedIndices.Select(index => context[index - 1]).ToList();
@@ -83,7 +112,7 @@ public sealed class ChatService(
         {
             ConversationId = conversationId,
             Role = MessageRole.Assistant,
-            Content = answer
+            Content = answerText
         };
         foreach (var citation in citations)
         {
@@ -93,14 +122,13 @@ public sealed class ChatService(
         db.Messages.Add(assistantMessage);
         await db.SaveChangesAsync(cancellationToken);
 
-        return new SendMessageResponse(
-            userMessage.Id,
-            assistantMessage.Id,
-            answer,
+        yield return new CitationsEvent(
             [.. citations.Select(citation => new CitationResponse(
                 citation.ChunkId,
                 citation.DocumentTitle,
                 citation.Content.Truncate(200),
                 citation.Score))]);
+
+        yield return new CompletedEvent(userMessageId, assistantMessage.Id);
     }
 }

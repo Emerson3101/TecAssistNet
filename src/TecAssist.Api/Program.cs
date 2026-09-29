@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Serilog;
+using TecAssist.Api.Auth;
 using TecAssist.Api.Middleware;
 using TecAssist.Api.Services;
 using TecAssist.Application;
@@ -36,6 +39,10 @@ try
     }
     else
     {
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer();
+        builder.Services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
+
         builder.Services.AddHttpContextAccessor();
         builder.Services.TryAddScoped<ICurrentUser, HttpContextCurrentUser>();
     }
@@ -66,6 +73,7 @@ try
 
     app.UseCors("Web");
     app.UseHttpsRedirection();
+    app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();
 

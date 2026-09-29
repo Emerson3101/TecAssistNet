@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using TecAssist.Application.Abstractions;
 using TecAssist.Application.Persistence;
 using TecAssist.Application.Rag;
+using TecAssist.Infrastructure.Auth;
 using TecAssist.Infrastructure.Nlp;
 using TecAssist.Infrastructure.Persistence;
 using TecAssist.Infrastructure.Search;
@@ -25,6 +26,11 @@ public static class DependencyInjection
                 .UseSnakeCaseNamingConvention());
 
         services.AddScoped<ITecAssistDbContext>(provider => provider.GetRequiredService<TecAssistDbContext>());
+
+        services.Configure<SupabaseOptions>(configuration.GetSection(SupabaseOptions.SectionName));
+        services.AddMemoryCache();
+        services.AddHttpClient<JwksProvider>();
+        services.AddHostedService<JwksWarmUpService>();
 
         services.Configure<NvidiaOptions>(configuration.GetSection(NvidiaOptions.SectionName));
         services.AddHttpClient<IEmbeddingClient, NvidiaEmbeddingClient>((provider, httpClient) =>

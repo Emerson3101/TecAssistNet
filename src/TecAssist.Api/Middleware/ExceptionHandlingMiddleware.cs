@@ -15,6 +15,10 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         {
             await WriteProblemAsync(context, StatusCodes.Status400BadRequest, exception.Message);
         }
+        catch (ResourceNotFoundException)
+        {
+            await WriteProblemAsync(context, StatusCodes.Status404NotFound, "The requested resource was not found.");
+        }
         catch (UnauthorizedAccessException)
         {
             await WriteProblemAsync(context, StatusCodes.Status401Unauthorized, "Authentication is required to access this resource.");

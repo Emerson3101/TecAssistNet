@@ -27,9 +27,3 @@ public sealed record MessageResponse(
     string Content,
     DateTime CreatedAt,
     IReadOnlyList<CitationResponse> Citations);
-
-public sealed record SendMessageResponse(
-    Guid UserMessageId,
-    Guid AssistantMessageId,
-    string Answer,
-    IReadOnlyList<CitationResponse> Citations);

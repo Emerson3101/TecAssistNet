@@ -1,13 +1,29 @@
 param(
     [string]$BaseUrl = "http://localhost:5028",
-    [int]$GenerationTimeoutSeconds = 300
+    [int]$GenerationTimeoutSeconds = 300,
+    [string]$SupabaseUrl,
+    [string]$AnonKey,
+    [string]$Email,
+    [string]$Password,
+    [string]$BearerToken
 )
 
 $ErrorActionPreference = "Stop"
 
+$headers = @{}
+if (-not $BearerToken -and $SupabaseUrl -and $AnonKey -and $Email -and $Password) {
+    $body = @{ grant_type = "password"; email = $Email; password = $Password } | ConvertTo-Json
+    $auth = Invoke-RestMethod -Uri "$SupabaseUrl/auth/v1/token?grant_type=password" -Method Post -ContentType "application/json" -Headers @{ apikey = $AnonKey; Authorization = "Bearer $AnonKey" } -Body $body -TimeoutSec 60
+    $BearerToken = $auth.access_token
+    Write-Host "[ok] signed in to Supabase as $Email"
+}
+if ($BearerToken) {
+    $headers["Authorization"] = "Bearer $BearerToken"
+}
+
 function Invoke-GetJson {
     param([string]$Uri)
-    Invoke-RestMethod -Uri $Uri -Method Get -TimeoutSec 60
+    Invoke-RestMethod -Uri $Uri -Method Get -Headers $headers -TimeoutSec 60
 }
 
 function Wait-UntilReady {
@@ -42,7 +58,7 @@ The TecAssist Industries TA-2200 voltage regulator ships with firmware revision 
         sourceType = "text"
     } | ConvertTo-Json
 
-    $document = Invoke-RestMethod -Uri "$BaseUrl/api/documents/text" -Method Post -Body $documentPayload -ContentType "application/json" -TimeoutSec 60
+    $document = Invoke-RestMethod -Uri "$BaseUrl/api/documents/text" -Method Post -Headers $headers -Body $documentPayload -ContentType "application/json" -TimeoutSec 60
     Write-Host "[ok] document accepted: $($document.id) (status: $($document.status))"
 
     $deadline = (Get-Date).AddSeconds(180)
@@ -61,30 +77,57 @@ The TecAssist Industries TA-2200 voltage regulator ships with firmware revision 
     Write-Host "[ok] document ready with $($document.chunkCount) chunk(s)"
 
     $conversationPayload = @{ title = "Smoke test conversation" } | ConvertTo-Json
-    $conversation = Invoke-RestMethod -Uri "$BaseUrl/api/conversations" -Method Post -Body $conversationPayload -ContentType "application/json" -TimeoutSec 60
+    $conversation = Invoke-RestMethod -Uri "$BaseUrl/api/conversations" -Method Post -Headers $headers -Body $conversationPayload -ContentType "application/json" -TimeoutSec 60
     Write-Host "[ok] conversation created: $($conversation.id)"
 
     $messagePayload = @{
         content = "What firmware revision ships with the TA-2200, and how many delivered units passed the Q3 voltage compliance test?"
     } | ConvertTo-Json
 
-    Write-Host "[..] asking the model (non-streaming; may take a while)..."
-    $reply = Invoke-RestMethod -Uri "$BaseUrl/api/conversations/$($conversation.id)/messages" -Method Post -Body $messagePayload -ContentType "application/json" -TimeoutSec $GenerationTimeoutSeconds
+    Write-Host "[..] asking the model (SSE streaming; may take a while)..."
+    $raw = Invoke-WebRequest -Uri "$BaseUrl/api/conversations/$($conversation.id)/messages" -Method Post -Headers $headers -Body $messagePayload -ContentType "application/json" -TimeoutSec $GenerationTimeoutSeconds -UseBasicParsing
 
+    $answer = New-Object System.Text.StringBuilder
+    $citationCount = 0
+    $tokenCount = 0
+    $assistantMessageId = $null
+
+    $frames = $raw.Content -split "`r?`n`r?`n"
+    foreach ($frame in $frames) {
+        if (-not $frame.Trim()) { continue }
+
+        $eventName = $null
+        $dataLine = $null
+        foreach ($line in ($frame -split "`r?`n")) {
+            if ($line.StartsWith("event: ")) { $eventName = $line.Substring(7).Trim() }
+            elseif ($line.StartsWith("data: ")) { $dataLine = $line.Substring(6) }
+        }
+
+        if ($null -eq $dataLine) { continue }
+        $data = $dataLine | ConvertFrom-Json
+
+        switch ($eventName) {
+            "token" { [void]$answer.Append($data.text); $tokenCount++ }
+            "citation" { $citationCount++ }
+            "done" { $assistantMessageId = $data.assistantMessageId }
+            "error" { throw "The stream reported an error: $($data.message)" }
+        }
+    }
+
+    if ($tokenCount -eq 0) { throw "The model streamed no tokens." }
+    if (-not $assistantMessageId) { throw "The stream did not complete (no done frame)." }
+
+    Write-Host "[ok] streamed $tokenCount token frame(s) with $citationCount citation frame(s)"
     Write-Host "[ok] model answer:"
     Write-Host ""
-    Write-Host $reply.answer
+    Write-Host $answer.ToString()
     Write-Host ""
-    Write-Host "[ok] citations: $($reply.citations.Count)"
-    foreach ($citation in $reply.citations) {
-        Write-Host ("     - {0} (score {1})" -f $citation.documentTitle, $citation.score.ToString("N3"))
-    }
 
     $messages = Invoke-GetJson "$BaseUrl/api/conversations/$($conversation.id)/messages"
     Write-Host "[ok] message history persisted: $($messages.Count) message(s)"
 
-    Invoke-RestMethod -Uri "$BaseUrl/api/conversations/$($conversation.id)" -Method Delete -TimeoutSec 60 | Out-Null
-    Invoke-RestMethod -Uri "$BaseUrl/api/documents/$($document.id)" -Method Delete -TimeoutSec 60 | Out-Null
+    Invoke-RestMethod -Uri "$BaseUrl/api/conversations/$($conversation.id)" -Method Delete -Headers $headers -TimeoutSec 60 | Out-Null
+    Invoke-RestMethod -Uri "$BaseUrl/api/documents/$($document.id)" -Method Delete -Headers $headers -TimeoutSec 60 | Out-Null
     Write-Host "[ok] test conversation and document cleaned up"
 
     Write-Host "== SMOKE TEST PASSED =="

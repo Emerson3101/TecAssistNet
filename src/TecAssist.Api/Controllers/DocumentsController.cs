@@ -1,4 +1,5 @@
 using System.Net.Mime;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TecAssist.Application.Contracts;
 using TecAssist.Application.Documents;
@@ -6,6 +7,7 @@ using TecAssist.Application.Documents;
 namespace TecAssist.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/documents")]
 [Produces(MediaTypeNames.Application.Json)]
 public sealed class DocumentsController(DocumentService documentService) : ControllerBase
