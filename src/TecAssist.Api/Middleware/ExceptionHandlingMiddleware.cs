@@ -56,7 +56,9 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
 
         context.Response.Clear();
         context.Response.StatusCode = statusCode;
-        context.Response.ContentType = "application/problem+json";
-        await context.Response.WriteAsJsonAsync(new ProblemDetails { Status = statusCode, Title = title });
+        await context.Response.WriteAsJsonAsync(
+            new ProblemDetails { Status = statusCode, Title = title },
+            options: null,
+            contentType: "application/problem+json");
     }
 }

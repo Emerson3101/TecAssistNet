@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -36,6 +37,13 @@ try
     {
         var devUserId = builder.Configuration.GetValue("Auth:DevUserId", "00000000-0000-0000-0000-000000000001");
         builder.Services.AddSingleton<ICurrentUser>(new DevCurrentUser(Guid.Parse(devUserId)));
+
+        builder.Services.AddAuthorization(options =>
+        {
+            options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                .RequireAssertion(_ => true)
+                .Build();
+        });
     }
     else
     {

@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\TecAssist.Application\TecAssist.Application.csproj" />
     <ProjectReference Include="..\..\src\TecAssist.Domain\TecAssist.Domain.csproj" />
+    <ProjectReference Include="..\..\src\TecAssist.Infrastructure\TecAssist.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
