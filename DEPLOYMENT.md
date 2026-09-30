@@ -56,6 +56,8 @@ Leave `Auth__Disabled` **unset** — production must require real JWTs.
 
 ### Wire CI to deploy
 
+> **If "Get publish profile" says basic authentication is disabled** — new App Services disable it by default. Go to **Settings → Configuration → General settings → SCM Basic Auth Publishing Credentials**, switch it **On**, Save, then download the profile again. (The credential-free alternative is GitHub OIDC / workload-identity federation — nicer, but it needs an Entra app registration and role assignment; the publish profile is fine for a portfolio project.)
+
 1. App Service → **Overview → Get publish profile** (downloads a `.PublishSettings` file; open it in a text editor and copy everything).
 2. GitHub repo → **Settings → Secrets and variables → Actions**:
    - Tab **Secrets** → New repository secret: name `AZURE_PUBLISH_PROFILE`, value = the file contents.
