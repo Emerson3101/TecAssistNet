@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { streamChatAnswer } from "@/lib/sse";
+import { cacheConversation, takeCachedConversation } from "@/lib/chat-cache";
 import type { ChatMessage } from "@/lib/types";
 import { notifyConversationsChanged } from "@/components/conversations/use-conversations";
 import { MessageList } from "@/components/chat/message-list";
@@ -12,10 +13,26 @@ import { Composer } from "@/components/chat/composer";
 import { EmptyState } from "@/components/chat/empty-state";
 import { SourcesSheet } from "@/components/chat/sources-sheet";
 
+function applyDoneIds(
+  previous: ChatMessage[],
+  ids: { userMessageId: string; assistantMessageId: string }
+): ChatMessage[] {
+  if (!previous.length) {
+    return previous;
+  }
+  const copy = [...previous];
+  const last = copy.length - 1;
+  copy[last] = { ...copy[last], id: ids.assistantMessageId, streaming: false };
+  if (copy[last - 1]?.role === "user") {
+    copy[last - 1] = { ...copy[last - 1], id: ids.userMessageId };
+  }
+  return copy;
+}
+
 export function ChatView({ conversationId }: { conversationId?: string }) {
   const router = useRouter();
-  const [messages, setMessages] = useState<ChatMessage[] | null>(
-    conversationId ? null : []
+  const [messages, setMessages] = useState<ChatMessage[] | null>(() =>
+    conversationId ? takeCachedConversation(conversationId) : []
   );
   const [composerValue, setComposerValue] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -24,11 +41,17 @@ export function ChatView({ conversationId }: { conversationId?: string }) {
   } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const draftConversationIdRef = useRef<string | null>(null);
+  const latestMessagesRef = useRef<ChatMessage[] | null>(messages);
+
+  useEffect(() => {
+    latestMessagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     if (!conversationId) {
       return;
     }
+
     let cancelled = false;
     api
       .getMessages(conversationId)
@@ -126,22 +149,15 @@ export function ChatView({ conversationId }: { conversationId?: string }) {
                 citations: [...message.citations, citation],
               })),
             onDone: (ids) => {
-              setMessages((previous) => {
-                if (!previous?.length) {
-                  return previous;
-                }
-                const copy = [...previous];
-                const last = copy.length - 1;
-                copy[last] = {
-                  ...copy[last],
-                  id: ids.assistantMessageId,
-                  streaming: false,
-                };
-                if (copy[last - 1]?.role === "user") {
-                  copy[last - 1] = { ...copy[last - 1], id: ids.userMessageId };
-                }
-                return copy;
-              });
+              setMessages((previous) =>
+                previous ? applyDoneIds(previous, ids) : previous
+              );
+
+              const base = latestMessagesRef.current;
+              if (base && base.length >= 2) {
+                cacheConversation(activeId, applyDoneIds(base, ids));
+              }
+
               notifyConversationsChanged();
             },
           },
@@ -151,7 +167,12 @@ export function ChatView({ conversationId }: { conversationId?: string }) {
         setStreaming(false);
         abortRef.current = null;
         if (!conversationId && draftConversationIdRef.current) {
-          router.push(`/chat/${draftConversationIdRef.current}`);
+          const draftedId = draftConversationIdRef.current;
+          router.push(`/chat/${draftedId}`);
+          void api
+            .generateConversationTitle(draftedId)
+            .then(() => notifyConversationsChanged())
+            .catch(() => undefined);
         }
       } catch (error) {
         setStreaming(false);
@@ -218,7 +239,7 @@ export function ChatView({ conversationId }: { conversationId?: string }) {
       )}
 
       <div className="relative">
-        <div className="pointer-events-none absolute -top-10 bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-background to-transparent" />
+        <div className="pointer-events-none absolute -top-12 bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent" />
         <Composer
           value={composerValue}
           onChange={setComposerValue}

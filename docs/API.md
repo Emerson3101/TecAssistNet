@@ -100,6 +100,20 @@ data: {"userMessageId":"...","assistantMessageId":"..."}
 - If generation fails after the stream starts, an `event: error` frame `{"message": "..."}` replaces the remaining frames.
 - Pre-stream failures return regular problem+json statuses: `404` for a missing/foreign conversation, `502` for context-retrieval or model failure, `400` for invalid payloads.
 
+### Generate an AI conversation title
+
+```
+POST /api/conversations/{id}/title
+```
+
+Asks the model (a separate, background stream) to name the conversation from its first exchange. No-op when the conversation already has a title (manual renames are never overwritten).
+
+```json
+{ "id": "7ff47656-…", "title": "Voltage compliance in Q3" }
+```
+
+The web app fires this automatically once the first streamed response completes, so new chats get a short, meaningful name in the sidebar without the user doing anything.
+
 ## Example with curl
 
 ```bash

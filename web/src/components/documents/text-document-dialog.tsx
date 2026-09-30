@@ -142,7 +142,7 @@ export function TextDocumentDialog({
             <Button
               type="submit"
               disabled={!title.trim() || !content.trim() || submitting}
-              className="bg-gradient-to-r from-violet-500 to-cyan-500 text-white shadow-lg shadow-violet-500/25 hover:brightness-110"
+              className="bg-gradient-to-r from-jade to-gold text-black/85 shadow-lg shadow-jade/25 hover:brightness-110"
             >
               {submitting ? (
                 <Loader2 className="size-4 animate-spin" />

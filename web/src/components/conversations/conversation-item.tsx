@@ -100,20 +100,23 @@ export function ConversationItem({
         <Link
           href={`/chat/${conversation.id}`}
           onClick={onNavigate}
-          className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+          className={`relative flex items-start gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors ${
             isActive
-              ? "bg-primary/15 text-foreground"
+              ? "bg-jade/12 text-foreground"
               : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
           }`}
         >
+          {isActive && (
+            <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-jade to-gold" />
+          )}
           <MessageSquare
-            className={`size-4 shrink-0 ${isActive ? "text-primary" : ""}`}
+            className={`mt-0.5 size-4 shrink-0 ${isActive ? "text-primary" : ""}`}
           />
           <div className="min-w-0 flex-1">
-            <p className="truncate leading-5">
+            <p className="line-clamp-2 break-words leading-snug">
               {conversation.title ?? "New conversation"}
             </p>
-            <p className="text-xs leading-4 text-muted-foreground/70">
+            <p className="mt-0.5 text-xs leading-4 text-muted-foreground/70">
               {formatRelativeTime(conversation.lastMessageAt ?? conversation.createdAt)} ·{" "}
               {conversation.messageCount} message{conversation.messageCount === 1 ? "" : "s"}
             </p>

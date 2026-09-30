@@ -89,6 +89,7 @@ The app serves at `http://localhost:3000`.
 | `PATCH`/`DELETE` | `/api/conversations/{id}` | Rename / delete a conversation |
 | `GET` | `/api/conversations/{id}/messages` | Message history with citations |
 | `POST` | `/api/conversations/{id}/messages` | Ask — **streams the reply over SSE** |
+| `POST` | `/api/conversations/{id}/title` | Generate a short AI title from the first exchange |
 | `GET` | `/health`, `/health/ready` | Liveness / readiness (DB probe) |
 
 ## Testing

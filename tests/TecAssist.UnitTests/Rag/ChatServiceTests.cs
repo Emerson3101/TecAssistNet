@@ -98,7 +98,7 @@ public sealed class ChatServiceTests : DatabaseTestBase
     }
 
     [Fact]
-    public async Task SendMessage_AutoTitlesConversation_FromFirstMessage()
+    public async Task SendMessage_LeavesConversationUntitled()
     {
         var (service, context) = await CreateServiceAsync(
             new FakeChunkSearcher(FakeChunkSearcher.SingleResult()),
@@ -110,7 +110,81 @@ public sealed class ChatServiceTests : DatabaseTestBase
         while (await enumerator.MoveNextAsync()) { }
 
         await context.Entry(conversation).ReloadAsync();
-        Assert.Equal("Explain the calibration schedule", conversation.Title);
+        Assert.Null(conversation.Title);
+    }
+
+    [Fact]
+    public async Task GenerateTitle_NamesConversation_FromFirstExchange()
+    {
+        var (service, context) = await CreateServiceAsync(
+            new FakeChunkSearcher(FakeChunkSearcher.SingleResult()),
+            new FakeChatClient(["Calibration", " interval"]));
+        var conversation = await SeedConversationAsync(context);
+
+        await using var enumerator = (await service.StartMessageStreamAsync(conversation.Id, "How often to calibrate?"))
+            .Events.GetAsyncEnumerator();
+        while (await enumerator.MoveNextAsync()) { }
+
+        var title = await service.GenerateTitleAsync(conversation.Id);
+
+        await context.Entry(conversation).ReloadAsync();
+        Assert.Equal("Calibration interval", title);
+        Assert.Equal("Calibration interval", conversation.Title);
+    }
+
+    [Fact]
+    public async Task GenerateTitle_CleansModelOutput()
+    {
+        var (service, context) = await CreateServiceAsync(
+            new FakeChunkSearcher(FakeChunkSearcher.SingleResult()),
+            new FakeChatClient(["  \"Voltage compliance", "\n Q3\".  "]));
+        var conversation = await SeedConversationAsync(context);
+
+        await using var enumerator = (await service.StartMessageStreamAsync(conversation.Id, "question"))
+            .Events.GetAsyncEnumerator();
+        while (await enumerator.MoveNextAsync()) { }
+
+        var title = await service.GenerateTitleAsync(conversation.Id);
+
+        Assert.Equal("Voltage compliance Q3", title);
+    }
+
+    [Fact]
+    public async Task GenerateTitle_IsNoOp_WhenTitleExists()
+    {
+        var (service, context) = await CreateServiceAsync(
+            new FakeChunkSearcher(FakeChunkSearcher.SingleResult()),
+            new FakeChatClient(["Generated", " title"]));
+        var conversation = await SeedConversationAsync(context, "Custom title");
+
+        var title = await service.GenerateTitleAsync(conversation.Id);
+
+        await context.Entry(conversation).ReloadAsync();
+        Assert.Equal("Custom title", title);
+    }
+
+    [Fact]
+    public async Task GenerateTitle_LeavesTitleNull_WhenNoMessages()
+    {
+        var (service, context) = await CreateServiceAsync(
+            new FakeChunkSearcher(FakeChunkSearcher.SingleResult()),
+            FakeChatClient.RespondingWith("title"));
+        var conversation = await SeedConversationAsync(context);
+
+        var title = await service.GenerateTitleAsync(conversation.Id);
+
+        Assert.Null(title);
+    }
+
+    [Fact]
+    public async Task GenerateTitle_ThrowsNotFound_ForMissingConversation()
+    {
+        var (service, _) = await CreateServiceAsync(
+            new FakeChunkSearcher(FakeChunkSearcher.SingleResult()),
+            FakeChatClient.RespondingWith("title"));
+
+        await Assert.ThrowsAsync<ResourceNotFoundException>(
+            () => service.GenerateTitleAsync(Guid.NewGuid()));
     }
 
     [Fact]

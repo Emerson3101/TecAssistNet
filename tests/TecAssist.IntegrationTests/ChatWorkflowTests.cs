@@ -154,6 +154,58 @@ public sealed class ChatWorkflowTests(ApiFactory factory)
     }
 
     [Fact]
+    public async Task GenerateTitle_NamesConversation_AfterFirstExchange()
+    {
+        using var client = factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync("/api/conversations", new { });
+        createResponse.EnsureSuccessStatusCode();
+        var conversationId = JsonDocument
+            .Parse(await createResponse.Content.ReadAsStringAsync())
+            .RootElement
+            .GetProperty("id")
+            .GetGuid();
+
+        var sendResponse = await client.PostAsJsonAsync(
+            $"/api/conversations/{conversationId}/messages",
+            new { content = "How often should we calibrate?" });
+        sendResponse.EnsureSuccessStatusCode();
+        await sendResponse.Content.ReadAsStringAsync();
+
+        var titleResponse = await client.PostAsync($"/api/conversations/{conversationId}/title", null);
+        titleResponse.EnsureSuccessStatusCode();
+
+        var payload = JsonDocument.Parse(await titleResponse.Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal(conversationId, payload.GetProperty("id").GetGuid());
+        Assert.Equal(
+            "The maintenance interval is 90 days [1]",
+            payload.GetProperty("title").GetString());
+
+        var listResponse = await client.GetAsync("/api/conversations");
+        listResponse.EnsureSuccessStatusCode();
+        var list = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync()).RootElement;
+        var listed = list
+            .EnumerateArray()
+            .Single(conversation => conversation.GetProperty("id").GetGuid() == conversationId);
+        Assert.Equal(
+            "The maintenance interval is 90 days [1]",
+            listed.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task GenerateTitle_KeepsCustomTitle()
+    {
+        using var client = factory.CreateClient();
+        var conversationId = await CreateConversationAsync(client, "Custom title");
+
+        var titleResponse = await client.PostAsync($"/api/conversations/{conversationId}/title", null);
+        titleResponse.EnsureSuccessStatusCode();
+
+        var payload = JsonDocument.Parse(await titleResponse.Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal("Custom title", payload.GetProperty("title").GetString());
+    }
+
+    [Fact]
     public async Task Conversation_CanBeRenamedAndDeleted()
     {
         using var client = factory.CreateClient();

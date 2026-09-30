@@ -73,7 +73,7 @@ export function DocumentsView() {
           </div>
           <Button
             onClick={() => setTextDialogOpen(true)}
-            className="rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 font-medium text-white shadow-lg shadow-violet-500/25 transition-all hover:shadow-violet-500/40 hover:brightness-110"
+            className="rounded-xl bg-gradient-to-r from-jade to-gold font-semibold text-black/85 shadow-lg shadow-jade/25 transition-all hover:shadow-gold/40 hover:brightness-110"
           >
             <Plus className="size-4" />
             Paste text

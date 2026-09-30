@@ -17,7 +17,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function UserMenu({ email }: { email: string | null }) {
+export function UserMenu({
+  email,
+  compact = false,
+}: {
+  email: string | null;
+  compact?: boolean;
+}) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [signingOut, setSigningOut] = useState(false);
@@ -46,22 +52,29 @@ export function UserMenu({ email }: { email: string | null }) {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-auto w-full justify-start gap-3 rounded-xl px-2 py-2"
+          className={
+            compact
+              ? "size-9 rounded-xl p-0"
+              : "h-auto w-full justify-start gap-3 rounded-xl px-2 py-2"
+          }
+          aria-label={compact ? "Account menu" : undefined}
         >
           <Avatar className="size-8">
-            <AvatarFallback className="bg-gradient-to-br from-violet-500 to-cyan-500 text-xs font-semibold text-white">
+            <AvatarFallback className="bg-gradient-to-br from-jade to-gold text-xs font-semibold text-black/85">
               {initial}
             </AvatarFallback>
           </Avatar>
-          <div className="min-w-0 flex-1 text-left">
-            <p className="truncate text-sm leading-4">Signed in</p>
-            <p className="truncate text-xs leading-4 text-muted-foreground">
-              {email ?? "user"}
-            </p>
-          </div>
+          {!compact && (
+            <div className="min-w-0 flex-1 text-left">
+              <p className="truncate text-sm leading-4">Signed in</p>
+              <p className="truncate text-xs leading-4 text-muted-foreground">
+                {email ?? "user"}
+              </p>
+            </div>
+          )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-60 rounded-xl">
+      <DropdownMenuContent align={compact ? "center" : "start"} className="w-60 rounded-xl">
         <DropdownMenuLabel className="truncate text-xs text-muted-foreground">
           {email ?? "user"}
         </DropdownMenuLabel>

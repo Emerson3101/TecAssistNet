@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TecAssist.Application.Abstractions;
@@ -19,6 +20,8 @@ public sealed class ChatService(
     PromptBuilder promptBuilder,
     IOptions<RagOptions> options)
 {
+    private static readonly Regex WhitespacePattern = new(@"\s+", RegexOptions.Compiled);
+
     public async Task<ChatMessageStream> StartMessageStreamAsync(
         Guid conversationId,
         string content,
@@ -36,11 +39,6 @@ public sealed class ChatService(
             Content = content
         };
         db.Messages.Add(userMessage);
-        if (string.IsNullOrWhiteSpace(conversation.Title))
-        {
-            conversation.Title = content.Truncate(options.Value.ConversationTitleMaxLength);
-        }
-
         await db.SaveChangesAsync(cancellationToken);
 
         IReadOnlyList<ChunkSearchResult> context;
@@ -66,6 +64,71 @@ public sealed class ChatService(
         return new ChatMessageStream(
             userMessage.Id,
             StreamAnswerAsync(conversationId, userMessage.Id, context, prompt, cancellationToken));
+    }
+
+    public async Task<string?> GenerateTitleAsync(
+        Guid conversationId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.RequireUserId();
+        var conversation = await db.Conversations
+            .FirstOrDefaultAsync(c => c.Id == conversationId && c.UserId == userId, cancellationToken)
+            ?? throw new ResourceNotFoundException($"Conversation '{conversationId}' was not found.");
+
+        if (!string.IsNullOrWhiteSpace(conversation.Title))
+        {
+            return conversation.Title;
+        }
+
+        var firstExchange = await db.Messages
+            .AsNoTracking()
+            .Where(message => message.ConversationId == conversationId)
+            .OrderBy(message => message.CreatedAt)
+            .Take(2)
+            .ToListAsync(cancellationToken);
+
+        if (firstExchange.Count == 0)
+        {
+            return conversation.Title;
+        }
+
+        var prompt = new List<ChatMessage>
+        {
+            new(
+                ChatRoles.System,
+                "You name chat conversations. Reply with a concise title of at most six words. No quotes, no trailing punctuation, no explanation - only the title."),
+            new(
+                ChatRoles.User,
+                $"Question: {firstExchange[0].Content}\n\nAnswer: {(firstExchange.Count > 1 ? firstExchange[1].Content.Truncate(400) : string.Empty)}"),
+        };
+
+        var builder = new StringBuilder();
+        await foreach (var token in chatClient.StreamCompletionAsync(prompt, cancellationToken))
+        {
+            builder.Append(token);
+        }
+
+        var title = CleanTitle(builder.ToString(), options.Value.ConversationTitleMaxLength);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return conversation.Title;
+        }
+
+        conversation.Title = title;
+        await db.SaveChangesAsync(cancellationToken);
+        return title;
+    }
+
+    private static string CleanTitle(string raw, int maxLength)
+    {
+        var title = WhitespacePattern.Replace(raw, " ").Trim();
+        title = title.Trim('"', '\'', '`', '*', ' ', '.');
+        if (title.Length > maxLength)
+        {
+            title = title[..maxLength].Trim();
+        }
+
+        return title;
     }
 
     private async IAsyncEnumerable<ChatStreamEvent> StreamAnswerAsync(

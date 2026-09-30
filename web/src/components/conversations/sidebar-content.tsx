@@ -4,25 +4,46 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { FileText, Plus, Search, Sparkles } from "lucide-react";
+import {
+  FileText,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { useConversations } from "@/components/conversations/use-conversations";
 import { ConversationItem } from "@/components/conversations/conversation-item";
 import { UserMenu } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 export function SidebarContent({
   user,
+  collapsed = false,
   onNavigate,
+  onToggleCollapse,
 }: {
   user: { email: string | null } | null;
+  collapsed?: boolean;
   onNavigate?: () => void;
+  onToggleCollapse?: () => void;
 }) {
   const pathname = usePathname();
   const { conversations } = useConversations();
   const [filter, setFilter] = useState("");
+
+  const documentsActive = pathname.startsWith("/documents");
 
   const visible = useMemo(() => {
     if (!conversations) {
@@ -37,27 +58,105 @@ export function SidebarContent({
     );
   }, [conversations, filter]);
 
+  if (collapsed) {
+    return (
+      <TooltipProvider>
+        <div className="flex h-full flex-col items-center gap-2.5 py-4">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9 rounded-xl text-muted-foreground hover:text-foreground"
+                onClick={onToggleCollapse}
+                aria-label="Expand sidebar"
+              >
+                <PanelLeftOpen className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Expand sidebar</TooltipContent>
+          </Tooltip>
+          <Separator className="w-8" />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className="size-9 rounded-xl"
+              >
+                <Link href="/chat" onClick={onNavigate} aria-label="New chat">
+                  <Plus className="size-4" strokeWidth={2.5} />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">New chat</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "size-9 rounded-xl",
+                  documentsActive && "bg-jade/12 text-foreground"
+                )}
+              >
+                <Link href="/documents" onClick={onNavigate} aria-label="Documents">
+                  <FileText className="size-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Documents</TooltipContent>
+          </Tooltip>
+
+          <div className="flex-1" />
+
+          <UserMenu email={user?.email ?? null} compact />
+        </div>
+      </TooltipProvider>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col gap-4 p-4">
-      <Link
-        href="/chat"
-        onClick={onNavigate}
-        className="flex items-center gap-2.5 px-1 py-1"
-      >
-        <div className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 shadow-md shadow-violet-500/25">
-          <Sparkles className="size-4 text-white" />
-        </div>
-        <span className="text-lg font-semibold tracking-tight">
-          Tec<span className="text-gradient">Assist</span>
-        </span>
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/chat"
+          onClick={onNavigate}
+          className="group flex items-center gap-2.5 px-1 py-1"
+        >
+          <motion.div
+            whileHover={{ rotate: 10, scale: 1.06 }}
+            transition={{ type: "spring", stiffness: 320, damping: 16 }}
+            className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-jade to-gold shadow-md shadow-jade/25"
+          >
+            <Sparkles className="size-4 text-black/85" />
+          </motion.div>
+          <span className="text-lg font-semibold tracking-tight">
+            Tec<span className="text-gradient">Assist</span>
+          </span>
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
+          onClick={onToggleCollapse}
+          aria-label="Collapse sidebar"
+        >
+          <PanelLeftClose className="size-4" />
+        </Button>
+      </div>
 
       <Button
         asChild
-        className="h-10 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 font-medium text-white shadow-lg shadow-violet-500/20 transition-all hover:shadow-violet-500/35 hover:brightness-110"
+        className="h-10 rounded-xl bg-gradient-to-r from-jade to-gold font-semibold text-black/85 shadow-lg shadow-jade/20 transition-all hover:shadow-gold/35 hover:brightness-110 active:scale-[0.99]"
       >
         <Link href="/chat" onClick={onNavigate}>
-          <Plus className="size-4" />
+          <Plus className="size-4" strokeWidth={2.5} />
           New chat
         </Link>
       </Button>
@@ -65,12 +164,18 @@ export function SidebarContent({
       <Link
         href="/documents"
         onClick={onNavigate}
-        className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors ${
-          pathname.startsWith("/documents")
-            ? "bg-primary/15 text-foreground"
+        className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+          documentsActive
+            ? "bg-jade/12 text-foreground"
             : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
         }`}
       >
+        {documentsActive && (
+          <motion.span
+            layoutId="nav-indicator"
+            className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-jade to-gold"
+          />
+        )}
         <FileText className="size-4" />
         Documents
       </Link>
@@ -81,7 +186,7 @@ export function SidebarContent({
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
           placeholder="Search chats..."
-          className="h-9 rounded-xl bg-background/60 pl-9 text-sm"
+          className="h-9 rounded-xl border-transparent bg-background/60 pl-9 text-sm focus-visible:ring-jade/25"
         />
       </div>
 

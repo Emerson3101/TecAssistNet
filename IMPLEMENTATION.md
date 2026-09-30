@@ -249,6 +249,7 @@ var results = await db.DocumentChunks
 | `PATCH`/`DELETE` | `/api/conversations/{id}` | Rename / delete a conversation |
 | `GET` | `/api/conversations/{id}/messages` | Message history with citations |
 | `POST` | `/api/conversations/{id}/messages` | Send a message; **streams** the assistant's reply (Server-Sent Events) |
+| `POST` | `/api/conversations/{id}/title` | Generate a short AI title from the first exchange |
 | `GET` | `/health` | Liveness |
 | `GET` | `/health/ready` | Readiness (checks DB connectivity) |
 

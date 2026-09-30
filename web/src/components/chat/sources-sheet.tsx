@@ -48,7 +48,7 @@ export function SourcesSheet({
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.max(2, Math.round(citation.score * 100))}%` }}
                         transition={{ delay: 0.15 + index * 0.05, type: "spring", stiffness: 90, damping: 20 }}
-                        className="h-full rounded-full bg-gradient-to-r from-violet-500 to-cyan-500"
+                        className="h-full rounded-full bg-gradient-to-r from-jade to-gold"
                       />
                     </div>
                     <p className="mt-1 text-right text-[11px] text-muted-foreground">

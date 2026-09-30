@@ -44,6 +44,15 @@ public sealed class ConversationsController(
         return messages is null ? NotFound() : Ok(messages);
     }
 
+    [HttpPost("{id:guid}/title")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GenerateTitle(Guid id, CancellationToken cancellationToken)
+    {
+        var title = await chatService.GenerateTitleAsync(id, cancellationToken);
+        return Ok(new { id, title });
+    }
+
     [HttpPost("{id:guid}/messages")]
     [Produces(MediaTypeNames.Text.EventStream)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

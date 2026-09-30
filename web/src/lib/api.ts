@@ -90,6 +90,11 @@ export const api = {
   deleteConversation: (id: string) =>
     request<void>(`/api/conversations/${id}`, { method: "DELETE" }),
 
+  generateConversationTitle: (id: string) =>
+    request<{ id: string; title: string | null }>(`/api/conversations/${id}/title`, {
+      method: "POST",
+    }),
+
   getMessages: (id: string) =>
     request<MessageResponse[]>(`/api/conversations/${id}/messages`),
 };

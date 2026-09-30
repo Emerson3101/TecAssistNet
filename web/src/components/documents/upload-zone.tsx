@@ -76,7 +76,7 @@ export function UploadZone({ onUploaded }: { onUploaded: () => void }) {
         uploading
           ? "cursor-wait border-primary/40 bg-primary/5"
           : dragging
-            ? "scale-[1.01] border-primary/60 bg-primary/10 shadow-lg shadow-violet-500/10"
+            ? "scale-[1.01] border-primary/60 bg-primary/10 shadow-lg shadow-jade/15"
             : "border-border hover:border-primary/35 hover:bg-primary/[0.03]"
       }`}
     >
@@ -121,7 +121,7 @@ export function UploadZone({ onUploaded }: { onUploaded: () => void }) {
             <motion.div
               animate={dragging ? { y: -4, scale: 1.1 } : { y: 0, scale: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/15 to-cyan-500/15 text-primary"
+              className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-jade/15 to-gold/15 text-primary"
             >
               {dragging ? (
                 <FileUp className="size-5" />

@@ -37,12 +37,12 @@ import {
 
 function SourceIcon({ sourceType }: { sourceType: DocumentResponse["sourceType"] }) {
   if (sourceType === "pdf") {
-    return <File className="size-5 text-red-400" />;
+    return <File className="size-5 text-ember" />;
   }
   if (sourceType === "markdown") {
-    return <FileCode className="size-5 text-cyan-400" />;
+    return <FileCode className="size-5 text-gold" />;
   }
-  return <FileText className="size-5 text-violet-400" />;
+  return <FileText className="size-5 text-jade" />;
 }
 
 function StatusPill({ status }: { status: DocumentResponse["status"] }) {
@@ -115,8 +115,9 @@ export function DocumentCard({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ delay: index * 0.04, type: "spring", stiffness: 280, damping: 28 }}
-        whileHover={{ y: -2 }}
-        className={`glass group relative flex flex-col gap-3 rounded-2xl p-4 ${
+        whileHover={{ y: -3, rotateX: 3 }}
+        style={{ transformPerspective: 700 }}
+        className={`glass group relative flex flex-col gap-3 rounded-2xl p-4 transition-colors hover:border-jade/25 ${
           document.status === "processing" || document.status === "pending"
             ? "shimmer"
             : ""
