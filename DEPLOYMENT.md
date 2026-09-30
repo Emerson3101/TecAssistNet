@@ -9,17 +9,16 @@ Every resource below is **$0** on the free tiers, driven entirely from web dashb
 
 ## Step 1 — GitHub
 
-1. Create a **public** repository (e.g. `tecasistnet`) at github.com/new — public gives you free Actions minutes and free GHCR storage.
+1. Create a **public** repository (e.g. `tecasistnet`) at github.com/new — public gives you free Actions minutes and free GHCR. *(Done: `Emerson3101/TecAssistNet`, default branch `main`.)*
 2. Push the code:
 
 ```powershell
-git remote add origin https://github.com/<your-username>/tecasistnet.git
-git push -u origin master
+git remote add origin https://github.com/Emerson3101/TecAssistNet.git
+git push -u origin main
 ```
 
-3. Fix the README badge URL (`<your-username>/tecassistnet` placeholder).
-4. The `ci-cd.yml` workflow runs on every push: build + 49 tests → web build → Docker image to `ghcr.io/<your-username>/tecasistnet`. Let it go green.
-5. **Check the package is public**: github.com → your profile → Packages → `tecasistnet` → Package settings → Danger Zone → Change visibility → **Public**. (Public packages are free; private ones consume storage quota.)
+3. The `ci-cd.yml` workflow runs on every push to `main`: build + 49 tests → web build → Docker image to `ghcr.io/emerson3101/tecasistnet` (docker requires lowercase image paths, which the workflow computes automatically). Let it go green.
+4. **Check the package is public**: github.com → your profile → Packages → `tecasistnet` → Package settings → Danger Zone → Change visibility → **Public**. (Public packages are free; private ones consume storage quota.)
 
 ## Step 2 — Azure App Service (Free F1, container)
 
@@ -36,7 +35,7 @@ git push -u origin master
    - URL: `https://ghcr.io`
    - Username: your GitHub username
    - Password: a **GitHub PAT** — github.com → Settings → Developer settings → Personal access tokens (classic) → Generate new: scope **`read:packages`** only
-   - Image and tag: `ghcr.io/<your-username>/tecasistnet:latest`
+   - Image and tag: `ghcr.io/emerson3101/tecasistnet:latest`
 7. Review + create → wait for deployment.
 
 ### Configure the app (Settings → Environment variables → App settings)

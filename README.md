@@ -2,7 +2,7 @@
 
 **A RAG-powered technical assistant, end to end** — an ASP.NET Core 10 Web API with Supabase (PostgreSQL + pgvector) for storage, NVIDIA NIM for embeddings and streaming chat, and a polished Next.js chat UI. Every answer is grounded in your uploaded documents and cites its sources.
 
-![CI/CD](https://github.com/<your-username>/tecassistnet/actions/workflows/ci-cd.yml/badge.svg)
+![CI/CD](https://github.com/Emerson3101/TecAssistNet/actions/workflows/ci-cd.yml/badge.svg)
 
 ![Login](docs/screenshots/login.png)
 
