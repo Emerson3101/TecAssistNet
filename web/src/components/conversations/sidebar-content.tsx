@@ -10,6 +10,7 @@ import {
   PanelLeftOpen,
   Plus,
   Search,
+  Settings,
   Sparkles,
 } from "lucide-react";
 import { useConversations } from "@/components/conversations/use-conversations";
@@ -44,6 +45,7 @@ export function SidebarContent({
   const [filter, setFilter] = useState("");
 
   const documentsActive = pathname.startsWith("/documents");
+  const settingsActive = pathname === "/settings";
 
   const visible = useMemo(() => {
     if (!conversations) {
@@ -113,6 +115,25 @@ export function SidebarContent({
             <TooltipContent side="right">Documents</TooltipContent>
           </Tooltip>
 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "size-9 rounded-xl",
+                  settingsActive && "bg-jade/12 text-foreground"
+                )}
+              >
+                <Link href="/settings" onClick={onNavigate} aria-label="Settings">
+                  <Settings className="size-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Settings</TooltipContent>
+          </Tooltip>
+
           <div className="flex-1" />
 
           <UserMenu email={user?.email ?? null} compact />
@@ -178,6 +199,25 @@ export function SidebarContent({
         )}
         <FileText className="size-4" />
         Documents
+      </Link>
+
+      <Link
+        href="/settings"
+        onClick={onNavigate}
+        className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+          settingsActive
+            ? "bg-jade/12 text-foreground"
+            : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+        }`}
+      >
+        {settingsActive && (
+          <motion.span
+            layoutId="nav-indicator"
+            className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-jade to-gold"
+          />
+        )}
+        <Settings className="size-4" />
+        Settings
       </Link>
 
       <div className="relative">

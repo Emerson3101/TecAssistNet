@@ -10,6 +10,7 @@ import {
   Moon,
   Plus,
   Search,
+  Settings,
   Sun,
   type LucideIcon,
 } from "lucide-react";
@@ -71,6 +72,14 @@ export function CommandPalette({
         group: "Actions",
         keywords: "documents upload files",
         run: () => navigate("/documents"),
+      },
+      {
+        id: "action-settings",
+        icon: Settings,
+        label: "Go to settings",
+        group: "Actions",
+        keywords: "settings preferences background theme options",
+        run: () => navigate("/settings"),
       },
       {
         id: "action-theme",

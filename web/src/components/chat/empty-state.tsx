@@ -7,7 +7,8 @@ import {
   MessageSquareQuote,
   Wrench,
 } from "lucide-react";
-import { OrbitalScene, ParticlesCanvas, GridFloor } from "@/components/scene";
+import { OrbitalScene } from "@/components/scene";
+import { useSettings } from "@/components/settings-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const SUGGESTIONS = [
@@ -40,20 +41,21 @@ export function EmptyState({
   loading: boolean;
   onSuggest: (prompt: string) => void;
 }) {
+  const { animatedBackground } = useSettings();
+
   return (
     <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-y-auto overflow-x-hidden px-4">
-      <ParticlesCanvas className="pointer-events-none absolute inset-0 size-full opacity-40" />
-      <GridFloor />
-
       <div className="relative w-full max-w-2xl py-10 text-center">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 22 }}
-          className="relative mx-auto mb-8 size-44"
-        >
-          <OrbitalScene className="size-full" />
-        </motion.div>
+        {animatedBackground && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 22 }}
+            className="relative mx-auto mb-8 size-44"
+          >
+            <OrbitalScene className="size-full" />
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}

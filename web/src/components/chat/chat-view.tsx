@@ -7,7 +7,9 @@ import { api, ApiError } from "@/lib/api";
 import { streamChatAnswer } from "@/lib/sse";
 import { cacheConversation, takeCachedConversation } from "@/lib/chat-cache";
 import type { ChatMessage } from "@/lib/types";
+import { ChatBackdrop } from "@/components/chat/chat-backdrop";
 import { notifyConversationsChanged } from "@/components/conversations/use-conversations";
+import { useSettings } from "@/components/settings-provider";
 import { MessageList } from "@/components/chat/message-list";
 import { Composer } from "@/components/chat/composer";
 import { EmptyState } from "@/components/chat/empty-state";
@@ -42,6 +44,7 @@ export function ChatView({ conversationId }: { conversationId?: string }) {
   const abortRef = useRef<AbortController | null>(null);
   const draftConversationIdRef = useRef<string | null>(null);
   const latestMessagesRef = useRef<ChatMessage[] | null>(messages);
+  const { animatedBackground } = useSettings();
 
   useEffect(() => {
     latestMessagesRef.current = messages;
@@ -223,6 +226,8 @@ export function ChatView({ conversationId }: { conversationId?: string }) {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
+      {animatedBackground && <ChatBackdrop subtle={hasMessages} />}
+
       {hasMessages ? (
         <MessageList
           messages={messages ?? []}

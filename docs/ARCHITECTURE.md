@@ -59,6 +59,7 @@ Legacy symmetric projects are supported by configuring `Supabase:JwtSecret` inst
 
 ## Notable engineering decisions
 
+- **Chunk size 250 words / embedding batch 2.** NIM's embeddings endpoint enforces a total-token budget per request (~2048 tokens): sending a full document as one large batch — the original 32-input configuration — is rejected with 400 or stalls to a gateway 502 "timed out". Measured empirically (3×500-word inputs pass, 4×500 fail, small inputs always pass), which is why large documents failed to index while small ones worked. The client also retries 5xx responses with backoff for NEM's transient gateway errors.
 - **Raw typed HTTP clients for NVIDIA** instead of the OpenAI .NET SDK. Two empirical reasons (repro'd in the commit history): `nemotron-3-embed-1b` requires the non-standard `input_type` field, and the SDK's streaming parser silently drops NEM's `reasoning_content` deltas — the official SDK yielded zero tokens while the raw stream carried them. Small typed clients with explicit wire records win.
 - **`vector(2048)` without an HNSW index.** pgvector's HNSW caps at 2000 dimensions; `nemotron-3-embed-1b` emits 2048 and has no dimension-truncation parameter. The `EmbeddingDimension2048` migration drops the index and widens the column; exact cosine scans are more than adequate at this scale, and the migration `Down()` recreates the index.
 - **snake_case database naming** via `EFCore.NamingConventions` so the schema matches the Supabase conventions everywhere else (and this README's SQL).
