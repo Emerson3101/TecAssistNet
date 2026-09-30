@@ -1,0 +1,17 @@
+.git
+.github
+.playwright-mcp
+.vs
+.vscode
+.idea
+docs
+scripts
+web
+TestResults
+**/bin
+**/obj
+*.md
+*.png
+*.http
+.env
+.env.local
