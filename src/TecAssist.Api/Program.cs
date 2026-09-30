@@ -85,6 +85,16 @@ try
     app.UseAuthorization();
     app.MapControllers();
 
+    app.MapGet("/", () => Results.Json(new
+    {
+        name = "TecAssist.NET API",
+        description = "RAG technical assistant - streaming chat grounded in your documents",
+        health = "/health",
+        readiness = "/health/ready",
+        documents = "/api/documents",
+        conversations = "/api/conversations"
+    }));
+
     app.MapHealthChecks("/health", new HealthCheckOptions
     {
         Predicate = _ => false
