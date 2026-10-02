@@ -23,10 +23,18 @@ public sealed class FakeStreamingChatClient(params string[] tokens) : IChatClien
 {
     public const string ExpectedAnswer = "The maintenance interval is 90 days [1].";
 
+    public int EmptyAttemptsRemaining { get; set; }
+
     public async IAsyncEnumerable<string> StreamCompletionAsync(
         IReadOnlyList<ChatMessage> messages,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        if (EmptyAttemptsRemaining > 0)
+        {
+            EmptyAttemptsRemaining--;
+            yield break;
+        }
+
         foreach (var token in tokens)
         {
             await Task.Yield();

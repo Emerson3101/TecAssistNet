@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using TecAssist.IntegrationTests.Fakes;
 using TecAssist.IntegrationTests.Infrastructure;
 
@@ -151,6 +152,72 @@ public sealed class ChatWorkflowTests(ApiFactory factory)
         Assert.Equal(
             "application/problem+json",
             response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task SendMessage_RecoversTransparently_WhenFirstStreamIsEmpty()
+    {
+        using var client = factory.CreateClient();
+        var fake = factory.Services.GetRequiredService<FakeStreamingChatClient>();
+        fake.EmptyAttemptsRemaining = 1;
+        try
+        {
+            var conversationId = await CreateConversationAsync(client);
+            var response = await client.PostAsJsonAsync(
+                $"/api/conversations/{conversationId}/messages",
+                new { content = "How often should we calibrate?" });
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var frames = SseFrame.Parse(await response.Content.ReadAsStringAsync());
+
+            Assert.DoesNotContain(frames, frame => frame.Event == "error");
+            Assert.Equal("done", frames[^1].Event);
+
+            var streamed = string.Concat(
+                frames
+                    .Where(frame => frame.Event == "token")
+                    .Select(frame => frame.Data.GetProperty("text").GetString()));
+            Assert.Equal(FakeStreamingChatClient.ExpectedAnswer, streamed);
+        }
+        finally
+        {
+            fake.EmptyAttemptsRemaining = 0;
+        }
+    }
+
+    [Fact]
+    public async Task SendMessage_EmptyAnswer_StreamsErrorFrame_AndPersistsOnlyUserMessage()
+    {
+        using var client = factory.CreateClient();
+        var fake = factory.Services.GetRequiredService<FakeStreamingChatClient>();
+        fake.EmptyAttemptsRemaining = int.MaxValue;
+        try
+        {
+            var conversationId = await CreateConversationAsync(client);
+            var response = await client.PostAsJsonAsync(
+                $"/api/conversations/{conversationId}/messages",
+                new { content = "How often should we calibrate?" });
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var frames = SseFrame.Parse(await response.Content.ReadAsStringAsync());
+
+            var error = Assert.Single(frames, frame => frame.Event == "error");
+            Assert.NotNull(error.Data.GetProperty("message").GetString());
+            Assert.DoesNotContain(frames, frame => frame.Event == "done");
+
+            var historyResponse = await client.GetAsync($"/api/conversations/{conversationId}/messages");
+            historyResponse.EnsureSuccessStatusCode();
+
+            var history = JsonDocument.Parse(await historyResponse.Content.ReadAsStringAsync()).RootElement;
+            Assert.Equal(1, history.GetArrayLength());
+            Assert.Equal("user", history[0].GetProperty("role").GetString());
+        }
+        finally
+        {
+            fake.EmptyAttemptsRemaining = 0;
+        }
     }
 
     [Fact]

@@ -219,6 +219,26 @@ public sealed class ChatServiceTests : DatabaseTestBase
         });
     }
 
+    [Fact]
+    public async Task SendMessage_EmptyAnswer_ThrowsChatGenerationException_AndPersistsNoAssistantMessage()
+    {
+        var (service, context) = await CreateServiceAsync(
+            new FakeChunkSearcher(FakeChunkSearcher.SingleResult()),
+            new FakeChatClient([]));
+        var conversation = await SeedConversationAsync(context);
+
+        var stream = await service.StartMessageStreamAsync(conversation.Id, "question");
+        await Assert.ThrowsAsync<ChatGenerationException>(async () =>
+        {
+            await foreach (var _ in stream.Events) { }
+        });
+
+        var messages = await context.Messages.ToListAsync(CancellationToken.None);
+        var userMessage = Assert.Single(messages);
+        Assert.Equal(MessageRole.User, userMessage.Role);
+        Assert.Empty(userMessage.Citations);
+    }
+
     private sealed class FailingChatClient : IChatClient
     {
         public async IAsyncEnumerable<string> StreamCompletionAsync(

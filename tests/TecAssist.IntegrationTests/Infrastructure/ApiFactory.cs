@@ -4,7 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using TecAssist.Application.Abstractions;
+using TecAssist.Application.Options;
+using TecAssist.Infrastructure.Nlp;
 using TecAssist.Infrastructure.Persistence;
 using TecAssist.IntegrationTests.Fakes;
 using Testcontainers.PostgreSql;
@@ -29,14 +33,19 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Nvidia:ApiKey", "unused-in-tests");
         builder.UseSetting("Nvidia:ChatModel", "unused-in-tests");
         builder.UseSetting("Nvidia:EmbeddingModel", "unused-in-tests");
+        builder.UseSetting("Rag:ChatStreamEmptyRetries", "1");
+        builder.UseSetting("Rag:ChatStreamRetryDelay", "00:00:00.050");
 
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<IEmbeddingClient>();
             services.RemoveAll<IChatClient>();
             services.AddSingleton<IEmbeddingClient>(new FakeEmbeddingClient(dimensions: 2048));
-            services.AddSingleton<IChatClient>(
-                new FakeStreamingChatClient("The maintenance interval", " is 90 days", " [1]."));
+            services.AddSingleton(new FakeStreamingChatClient("The maintenance interval", " is 90 days", " [1]."));
+            services.AddSingleton<IChatClient>(provider => new ResilientChatClient(
+                provider.GetRequiredService<FakeStreamingChatClient>(),
+                provider.GetRequiredService<ILogger<ResilientChatClient>>(),
+                provider.GetRequiredService<IOptions<RagOptions>>()));
         });
     }
 

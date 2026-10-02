@@ -2,8 +2,10 @@ using System.Net.Http.Headers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TecAssist.Application.Abstractions;
+using TecAssist.Application.Options;
 using TecAssist.Application.Persistence;
 using TecAssist.Application.Rag;
 using TecAssist.Infrastructure.Auth;
@@ -41,7 +43,7 @@ public static class DependencyInjection
             httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", settings.ApiKey);
         });
-        services.AddHttpClient<IChatClient, NvidiaChatClient>((provider, httpClient) =>
+        services.AddHttpClient<NvidiaChatClient>((provider, httpClient) =>
         {
             var settings = provider.GetRequiredService<IOptions<NvidiaOptions>>().Value;
             httpClient.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
@@ -49,6 +51,10 @@ public static class DependencyInjection
             httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", settings.ApiKey);
         });
+        services.AddScoped<IChatClient>(provider => new ResilientChatClient(
+            provider.GetRequiredService<NvidiaChatClient>(),
+            provider.GetRequiredService<ILogger<ResilientChatClient>>(),
+            provider.GetRequiredService<IOptions<RagOptions>>()));
 
         services.AddScoped<ITextExtractor, TextExtractor>();
         services.AddScoped<IChunkSearcher, PgVectorChunkSearcher>();

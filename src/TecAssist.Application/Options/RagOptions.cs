@@ -17,4 +17,8 @@ public sealed class RagOptions
     public int IngestionQueueCapacity { get; set; } = 128;
 
     public int ConversationTitleMaxLength { get; set; } = 80;
+
+    public int ChatStreamEmptyRetries { get; set; } = 1;
+
+    public TimeSpan ChatStreamRetryDelay { get; set; } = TimeSpan.FromSeconds(1.5);
 }

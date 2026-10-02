@@ -22,7 +22,8 @@
 - **Cited answers** — the model cites its sources inline (`[1]`, `[2]`); every citation is persisted and displayed with a similarity score.
 - **JWT resource server** — Supabase Auth issues ES256 tokens; the API validates them against the project's JWKS endpoint (no login system to maintain).
 - **Defense in depth** — ownership is enforced in the Application layer *and* by Postgres Row-Level Security on every user-scoped table.
-- **42 automated tests** — 30 unit tests plus 12 integration tests against a real ephemeral `pgvector/pgvector` container via Testcontainers, including an SSE wire-format contract test.
+- **Empty-answer resilience** — a zero-token model stream is retried transparently; if it stays empty, the API emits an SSE `error` frame instead of persisting an empty message.
+- **67 automated tests** — 51 unit tests plus 16 integration tests against a real ephemeral `pgvector/pgvector` container via Testcontainers, including SSE wire-format contract tests for the streaming and error paths.
 
 ## Architecture
 

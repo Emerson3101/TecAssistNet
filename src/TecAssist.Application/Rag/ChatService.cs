@@ -166,6 +166,11 @@ public sealed class ChatService(
         }
 
         var answerText = answer.ToString();
+        if (string.IsNullOrWhiteSpace(answerText))
+        {
+            throw new ChatGenerationException("The model returned an empty answer. Please try again.");
+        }
+
         var citedIndices = CitationParser.ExtractCitedIndices(answerText, context.Count);
         var citations = citedIndices.Count == 0
             ? context.ToList()

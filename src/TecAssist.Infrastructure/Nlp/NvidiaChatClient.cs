@@ -2,13 +2,17 @@ using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TecAssist.Application.Abstractions;
 using AppChatMessage = TecAssist.Application.Abstractions.ChatMessage;
 
 namespace TecAssist.Infrastructure.Nlp;
 
-public sealed class NvidiaChatClient(HttpClient httpClient, IOptions<NvidiaOptions> options) : IChatClient
+public sealed class NvidiaChatClient(
+    HttpClient httpClient,
+    IOptions<NvidiaOptions> options,
+    ILogger<NvidiaChatClient> logger) : IChatClient
 {
     public async IAsyncEnumerable<string> StreamCompletionAsync(
         IReadOnlyList<AppChatMessage> messages,
@@ -41,6 +45,9 @@ public sealed class NvidiaChatClient(HttpClient httpClient, IOptions<NvidiaOptio
         using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var reader = new StreamReader(contentStream);
 
+        var producedContent = false;
+        string? finishReason = null;
+
         while (true)
         {
             var line = await reader.ReadLineAsync(cancellationToken);
@@ -62,13 +69,43 @@ public sealed class NvidiaChatClient(HttpClient httpClient, IOptions<NvidiaOptio
             }
 
             var update = JsonSerializer.Deserialize<ChatStreamUpdate>(payload, Json.Options);
-            var deltaContent = update?.Choices?.Count > 0 ? update.Choices[0].Delta?.Content : null;
+
+            if (update?.Error is { } error)
+            {
+                throw new HttpRequestException(
+                    $"The NVIDIA chat endpoint reported a mid-stream error: {Truncate(ExtractErrorMessage(error))}");
+            }
+
+            var choice = update?.Choices is { Count: > 0 } ? update.Choices[0] : null;
+            if (choice?.FinishReason is not null)
+            {
+                finishReason = choice.FinishReason;
+            }
+
+            var deltaContent = choice?.Delta?.Content;
             if (!string.IsNullOrEmpty(deltaContent))
             {
+                producedContent = true;
                 yield return deltaContent;
             }
         }
+
+        if (!producedContent)
+        {
+            logger.LogWarning(
+                "The NVIDIA chat stream for model {Model} ended without any content (finish reason: {FinishReason}).",
+                settings.ChatModel,
+                finishReason ?? "unknown");
+        }
     }
+
+    private static string ExtractErrorMessage(JsonElement error) => error.ValueKind switch
+    {
+        JsonValueKind.String => error.GetString() ?? string.Empty,
+        JsonValueKind.Object when error.TryGetProperty("message", out var message)
+            && message.ValueKind == JsonValueKind.String => message.GetString() ?? string.Empty,
+        _ => error.ToString(),
+    };
 
     private static string Truncate(string body) => body.Length <= 500 ? body : body[..500];
 
@@ -88,7 +125,8 @@ public sealed class NvidiaChatClient(HttpClient httpClient, IOptions<NvidiaOptio
         [property: JsonPropertyName("content")] string Content);
 
     private sealed record ChatStreamUpdate(
-        [property: JsonPropertyName("choices")] IReadOnlyList<WireChoice>? Choices);
+        [property: JsonPropertyName("choices")] IReadOnlyList<WireChoice>? Choices,
+        [property: JsonPropertyName("error")] JsonElement? Error);
 
     private sealed record WireChoice(
         [property: JsonPropertyName("delta")] WireDelta? Delta,
