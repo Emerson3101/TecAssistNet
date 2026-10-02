@@ -4,9 +4,16 @@
 
 ![CI/CD](https://github.com/Emerson3101/TecAssistNet/actions/workflows/ci-cd.yml/badge.svg)
 
-![Login](docs/screenshots/login.png)
-
-![Chat](docs/screenshots/chat-answer.png)
+<p align="center">
+  <img width="49%" src="docs/screenshots/chat-answer.png" alt="Chat — streaming answers with inline citations and source chips">
+  <img width="49%" src="docs/screenshots/documents-light.png" alt="Document manager in light theme">
+  <br/>
+  <img width="49%" src="docs/screenshots/command-palette.png" alt="Command palette (Ctrl+K)">
+  <img width="49%" src="docs/screenshots/settings.png" alt="Settings — animated background and theme preferences">
+  <br/>
+  <img width="49%" src="docs/screenshots/login.png" alt="Login">
+  <img width="49%" src="docs/screenshots/chat-empty.png" alt="Empty chat with suggestion cards">
+</p>
 
 ## Highlights
 
